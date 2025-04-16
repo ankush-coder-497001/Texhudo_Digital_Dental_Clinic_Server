@@ -2,6 +2,7 @@ const Doctor = require('../models/Doctor.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { welcomeMessege, SendOTP, ForgotPasswordSuccessMessage } = require('../services/emailService');
+const { createConnectedAccount, createAccountLink, getAccountStatus } = require('../services/paymentService');
 
 // Register new doctor
 exports.register = async (req, res) => {
@@ -209,6 +210,48 @@ exports.resetPassword = async (req, res) => {
         await doctor.save();
 
         res.json({ message: 'Password reset successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Set up Stripe Connect account
+exports.setupStripeAccount = async (req, res) => {
+    try {
+        const doctor = await Doctor.findById(req.user.id);
+        if (!doctor) {
+            return res.status(404).json({ message: 'Doctor not found' });
+        }
+
+        if (!doctor.stripeAccountId) {
+            // Create a new Stripe Connect account
+            const account = await createConnectedAccount(doctor.email);
+            doctor.stripeAccountId = account.id;
+            await doctor.save();
+        }
+
+        // Create an account link for onboarding
+        const accountLink = await createAccountLink(doctor.stripeAccountId);
+        
+        res.json({ url: accountLink.url });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Check Stripe account status
+exports.getStripeAccountStatus = async (req, res) => {
+    try {
+        const doctor = await Doctor.findById(req.user.id);
+        if (!doctor || !doctor.stripeAccountId) {
+            return res.status(404).json({ message: 'Stripe account not found' });
+        }
+
+        const status = await getAccountStatus(doctor.stripeAccountId);
+        doctor.payoutEnabled = status.payoutsEnabled;
+        await doctor.save();
+
+        res.json(status);
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
     }

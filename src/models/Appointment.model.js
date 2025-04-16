@@ -16,7 +16,10 @@ const appointmentSchema = new mongoose.Schema({
     status: { type: String, enum: ['pending', 'paid', 'refunded', 'failed'], default: 'pending' },
     method: { type: String, enum: ['online', 'clinic', 'none'], default: 'none' },
     paymentIntentId: String,
-    receiptUrl: String
+    receiptUrl: String,
+    transferId: String,
+    transferStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
+    transferError: String
   },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });

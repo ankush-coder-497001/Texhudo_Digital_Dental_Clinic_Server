@@ -2,14 +2,14 @@ const { createPaymentIntent } = require('../services/paymentService');
 const Appointment = require('../models/Appointment.model');
 const Doctor = require('../models/Doctor.model');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-
+const Treatment = require('../models/Treatment.model');
+const Payment = require('../models/Payment.model');
 exports.BookAppointment = async (req, res) => {
   try {
-    const { doctorId, date, time, problem, teeth, amount ,method  } = req.body;
+    const { doctorId, date, time, problem, teeth, amount, method } = req.body;
     const userId = req.user.id;
 
     const doctor = await Doctor.findById(doctorId);
-    //check if the doctor is available
     if (!doctor) {
       return res.status(404).json({
         success: false,
@@ -61,34 +61,41 @@ exports.BookAppointment = async (req, res) => {
 
     let appointment;
     
-    if(method === 'online') {
-    // Create a payment intent
-    const paymentIntent = await createPaymentIntent(amount);
-
-    // Create appointment with payment details
-     appointment = new Appointment({
-      patientId: userId,
-      doctorId,
-      date,
-      time,
-      problem,
-      teeth,
-      payment: {
-        amount,
-        status: 'pending',
-        method: 'online',
-        paymentIntentId: paymentIntent.id
+    if (method === 'online') {
+      // Check if doctor has set up their Stripe account
+      if (!doctor.stripeAccountId || !doctor.payoutEnabled) {
+        return res.status(400).json({
+          success: false,
+          message: 'Doctor has not set up their payment account yet'
+        });
       }
-    });
-    await appointment.save();
 
-    res.status(200).json({
-      success: true,
-      clientSecret: paymentIntent.client_secret,
-      appointmentId: appointment._id
-    });
-    }
+      // Create a payment intent with automatic transfer to doctor's account
+      const paymentIntent = await createPaymentIntent(amount, doctor.stripeAccountId);
 
+      // Create appointment with payment details
+      appointment = new Appointment({
+        patientId: userId,
+        doctorId,
+        date,
+        time,
+        problem,
+        teeth,
+        payment: {
+          amount,
+          status: 'pending',
+          method: 'online',
+          paymentIntentId: paymentIntent.id
+        }
+      });
+      await appointment.save();
+
+      res.status(200).json({
+        success: true,
+        clientSecret: paymentIntent.client_secret,
+        appointmentId: appointment._id
+      });
+    } else {
       // Create appointment without payment details
       appointment = new Appointment({
         patientId: userId,
@@ -109,7 +116,7 @@ exports.BookAppointment = async (req, res) => {
         success: true,
         appointmentId: appointment._id
       });
-
+    }
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -128,26 +135,56 @@ exports.handlePaymentSuccess = async (req, res) => {
     event = stripe.webhooks.constructEvent(req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
     // Handle the event
 
-    if (event.type === 'payment_intent.succeeded') {
-      const paymentIntent = event.data.object;
-      
-      // Get the charge to access the receipt URL
-      const charges = await stripe.charges.list({
-        payment_intent: paymentIntent.id
-      });
-      const charge = charges.data[0];
-      
-      // Update appointment with payment confirmation and receipt
-      const appointment = await Appointment.findOne({
-        'payment.paymentIntentId': paymentIntent.id 
-      });
-      
-      if (appointment) {
-        appointment.status = 'confirmed';
-        appointment.payment.status = 'paid';
-        appointment.payment.receiptUrl = charge.receipt_url;
-        await appointment.save();
-      }
+    switch (event.type) {
+      case 'payment_intent.succeeded':
+        const paymentIntent = event.data.object;
+        
+        // Get the charge to access the receipt URL
+        const charges = await stripe.charges.list({
+          payment_intent: paymentIntent.id
+        });
+        const charge = charges.data[0];
+        
+        // Update appointment with payment confirmation and receipt
+        const appointment = await Appointment.findOne({
+          'payment.paymentIntentId': paymentIntent.id 
+        });
+        
+        if (appointment) {
+          appointment.status = 'confirmed';
+          appointment.payment.status = 'paid';
+          appointment.payment.receiptUrl = charge.receipt_url;
+          await appointment.save();
+        }
+        break;
+
+      case 'transfer.paid':
+        const transfer = event.data.object;
+        // Update appointment to reflect successful transfer to doctor
+        const transferAppointment = await Appointment.findOne({
+          'payment.paymentIntentId': transfer.source_transaction
+        });
+        
+        if (transferAppointment) {
+          transferAppointment.payment.transferStatus = 'completed';
+          transferAppointment.payment.transferId = transfer.id;
+          await transferAppointment.save();
+        }
+        break;
+
+      case 'transfer.failed':
+        const failedTransfer = event.data.object;
+        // Update appointment to reflect failed transfer
+        const failedAppointment = await Appointment.findOne({
+          'payment.paymentIntentId': failedTransfer.source_transaction
+        });
+        
+        if (failedAppointment) {
+          failedAppointment.payment.transferStatus = 'failed';
+          failedAppointment.payment.transferError = failedTransfer.failure_message;
+          await failedAppointment.save();
+        }
+        break;
     }
 
     res.json({ received: true });
@@ -269,10 +306,39 @@ exports.updateAppointmentStatus = async (req, res) => {
         message: 'Appointment not found'
       });
     }
+   let treatment ; 
+    if(appointment.status === 'completed') {
+      //create a treatment 
+        treatment = new Treatment({
+        appointmentId: appointment._id,
+        doctorId: appointment.doctorId,
+        patientId: appointment.patientId,
+        treatment: appointment?.problem, // e.g., "Filling", "Cleaning"
+        teeth: appointment.teeth, // Teeth involved in treatment
+        notes: 'Treatment completed successfully',
+        date: appointment.date
+      });
+
+      await treatment.save();
+      //create a payment 
+      const payment = new Payment({
+        appointmentId: appointment._id,
+        patientId: appointment.patientId,
+        amount: appointment.payment.amount,
+        status: 'paid',
+        paymentMethod: appointment.payment.method,
+        transactionId: appointment.payment.paymentIntentId,
+        receiptUrl: appointment.payment.receiptUrl
+      });
+      await payment.save();
+
+    }
 
     res.status(200).json({
       success: true,
-      appointment
+      appointment,
+      message: 'Appointment status updated successfully',
+      treatment: treatment ? treatment : null
     });
   } catch (error) {
     res.status(500).json({

@@ -9,10 +9,13 @@ router.post('/login', doctorController.login);
 router.post('/Send-OTP', doctorController.SendOTP);
 router.post('/forget-password', doctorController.forgetPassword);
 
-
 // Protected routes
 router.get('/profile', authMiddleware(['doctor']), doctorController.getProfile);
 router.put('/profile', authMiddleware(['doctor']), doctorController.updateProfile);
 router.post('/reset-password', authMiddleware(['doctor']), doctorController.resetPassword);
+
+// Stripe Connect routes
+router.post('/stripe/setup', authMiddleware(['doctor']), doctorController.setupStripeAccount);
+router.get('/stripe/status', authMiddleware(['doctor']), doctorController.getStripeAccountStatus);
 
 module.exports = router;
