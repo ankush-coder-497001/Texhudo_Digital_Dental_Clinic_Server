@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+
 const appointmentSchema = new mongoose.Schema({
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
@@ -11,18 +12,23 @@ const appointmentSchema = new mongoose.Schema({
     enum: ['booked', 'confirmed', 'completed', 'cancelled'], 
     default: 'booked' 
   },
-  payment: {
-    amount: { type: Number, required: true },
-    status: { type: String, enum: ['pending', 'paid', 'refunded', 'failed'], default: 'pending' },
-    method: { type: String, enum: ['online', 'clinic', 'none'], default: 'none' },
-    paymentIntentId: String,
-    receiptUrl: String,
-    transferId: String,
-    transferStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'pending' },
-    transferError: String
+  fees: { type: Number, required: true }, // Doctor's consultation fees
+  paymentReceived: { type: Boolean, default: false }, // Track if payment was received at clinic
+  paymentDate: { type: Date }, // Date when payment was received
+  paymentMode: { type: String, enum: ['cash', 'card', 'upi', 'other'], default: 'cash' }, // Mode of payment at clinic
+  paymentNotes: { type: String }, // Any additional notes about payment
+  appointmentToken: {
+    type: String,
+    unique: true,
+    required: true
   },
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
+
+// Add indexes for better query performance on financial reports
+appointmentSchema.index({ doctorId: 1, date: 1 });
+appointmentSchema.index({ doctorId: 1, status: 1 });
+appointmentSchema.index({ doctorId: 1, paymentReceived: 1 });
 
 const Appointment = mongoose.model('Appointment', appointmentSchema);
 module.exports = Appointment;

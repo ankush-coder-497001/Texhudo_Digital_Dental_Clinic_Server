@@ -1,13 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/authMiddleware');
-const AppointmentController = require('../controllers/Appointment.ctrl');
+const { authMiddleware } = require('../middlewares/authMiddleware');
+const {
+    BookAppointment,
+    getMyAppointments,
+    getAppointmentDetails,
+    getDoctorAppointments,
+    updateAppointmentStatus,
+    deleteAppointment,
+    getDoctorEarnings,
+    getEarningsSummary
+} = require('../controllers/Appointment.ctrl');
 
-router.post('/book', auth, AppointmentController.BookAppointment);
-router.get('/my-appointments', auth, AppointmentController.getMyAppointments);
-router.get('/:id', auth, AppointmentController.getAppointmentDetails);
-router.get('/doctor/:doctorId', auth(['doctor']), AppointmentController.getDoctorAppointments);
-router.put('/update/:id', auth, AppointmentController.updateAppointmentStatus);
-router.delete('/delete/:id', auth, AppointmentController.deleteAppointment);
+// Regular appointment routes
+router.post('/book', authMiddleware, BookAppointment);
+router.get('/my-appointments', authMiddleware, getMyAppointments);
+router.get('/details/:id', authMiddleware, getAppointmentDetails);
+router.get('/doctor/:doctorId', authMiddleware, getDoctorAppointments);
+router.put('/status/:id', authMiddleware, updateAppointmentStatus);
+router.delete('/:id', authMiddleware, deleteAppointment);
+
+// Financial tracking routes
+router.get('/earnings', authMiddleware, getDoctorEarnings);
+router.get('/earnings-summary', authMiddleware, getEarningsSummary);
 
 module.exports = router;

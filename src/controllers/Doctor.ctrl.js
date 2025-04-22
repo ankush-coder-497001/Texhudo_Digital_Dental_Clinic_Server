@@ -2,12 +2,12 @@ const Doctor = require('../models/Doctor.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { welcomeMessege, SendOTP, ForgotPasswordSuccessMessage } = require('../services/emailService');
-const { createConnectedAccount, createAccountLink, getAccountStatus } = require('../services/paymentService');
+const { uploadImage, deleteImage } = require('../services/cloudinaryService');
 
 // Register new doctor
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, phone, specialization, availableDays, availableHours ,Fees } = req.body;
+        const { name, email, password, phone, specialization, availableDays, availableHours, Fees } = req.body;
 
         // Check if doctor exists
         const existingDoctor = await Doctor.findOne({ email });
@@ -99,7 +99,7 @@ exports.getProfile = async (req, res) => {
 // Update doctor profile
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, phone, specialization, availableDays, availableHours ,Fees } = req.body;
+        const { name, phone, specialization, availableDays, availableHours, Fees } = req.body;
         const doctor = await Doctor.findById(req.user.id);
         
         if (!doctor) {
@@ -215,44 +215,52 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-// Set up Stripe Connect account
-exports.setupStripeAccount = async (req, res) => {
+exports.uploadProfilePicture = async (req, res) => {
     try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please upload an image'
+            });
+        }
+
         const doctor = await Doctor.findById(req.user.id);
         if (!doctor) {
-            return res.status(404).json({ message: 'Doctor not found' });
+            return res.status(404).json({
+                success: false,
+                message: 'Doctor not found'
+            });
         }
 
-        if (!doctor.stripeAccountId) {
-            // Create a new Stripe Connect account
-            const account = await createConnectedAccount(doctor.email);
-            doctor.stripeAccountId = account.id;
-            await doctor.save();
+        // Delete old profile picture if exists
+        if (doctor.profilePictureId) {
+            await deleteImage(doctor.profilePictureId);
         }
 
-        // Create an account link for onboarding
-        const accountLink = await createAccountLink(doctor.stripeAccountId);
-        
-        res.json({ url: accountLink.url });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// Check Stripe account status
-exports.getStripeAccountStatus = async (req, res) => {
-    try {
-        const doctor = await Doctor.findById(req.user.id);
-        if (!doctor || !doctor.stripeAccountId) {
-            return res.status(404).json({ message: 'Stripe account not found' });
+        // Upload new image
+        const result = await uploadImage(req.file, 'doctors');
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: 'Error uploading image'
+            });
         }
 
-        const status = await getAccountStatus(doctor.stripeAccountId);
-        doctor.payoutEnabled = status.payoutsEnabled;
+        // Update doctor profile
+        doctor.profilePicture = result.url;
+        doctor.profilePictureId = result.publicId;
         await doctor.save();
 
-        res.json(status);
+        res.json({
+            success: true,
+            message: 'Profile picture updated successfully',
+            profilePicture: doctor.profilePicture
+        });
     } catch (error) {
-        res.status(500).json({ message: 'Server error', error: error.message });
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
 };

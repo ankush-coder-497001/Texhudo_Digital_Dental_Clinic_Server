@@ -2,6 +2,7 @@ const User = require('../models/User.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { welcomeMessege, SendOTP, ForgotPasswordSuccessMessage } = require('../services/emailService');
+const { uploadImage, deleteImage } = require('../services/cloudinaryService');
 
 // Register new user
 exports.register = async (req, res) => {
@@ -201,6 +202,57 @@ exports.resetPassword = async (req, res) => {
         res.json({ message: 'Password reset successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
+// Upload profile picture
+exports.uploadProfilePicture = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please upload an image'
+            });
+        }
+
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Delete old profile picture if exists
+        if (user.profilePictureId) {
+            await deleteImage(user.profilePictureId);
+        }
+
+        // Upload new image
+        const result = await uploadImage(req.file);
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: 'Error uploading image'
+            });
+        }
+
+        // Update user profile
+        user.profilePicture = result.url;
+        user.profilePictureId = result.publicId;
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Profile picture updated successfully',
+            profilePicture: user.profilePicture
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server error',
+            error: error.message
+        });
     }
 };
 

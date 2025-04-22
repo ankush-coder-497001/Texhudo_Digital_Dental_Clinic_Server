@@ -1,17 +1,13 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const pharmacistSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phone: { type: String, required: true },
+  licenseNumber: { type: String, required: true },
   profilePicture: { type: String },
   profilePictureId: { type: String }, // Cloudinary public_id
-  paymentMethods: [{
-    cardLast4: String,
-    cardBrand: String,
-    paymentMethodId: String // From payment processor like Stripe
-  }],
   resetPasswordOTP: {
     code: String,
     expiryTime: Date
@@ -19,5 +15,5 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-const User = mongoose.model('User', userSchema);
-module.exports = User;
+const Pharmacist = mongoose.model('Pharmacist', pharmacistSchema);
+module.exports = Pharmacist;

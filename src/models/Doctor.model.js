@@ -15,14 +15,8 @@ const doctorSchema = new mongoose.Schema({
     expiryTime: Date
   },
   Fees: { type: Number, required: true },
-  stripeAccountId: { type: String },
-  bankAccount: {
-    accountNumber: { type: String },
-    routingNumber: { type: String },
-    accountHolderName: { type: String },
-    bankName: { type: String }
-  },
-  payoutEnabled: { type: Boolean, default: false },
+  profilePicture: { type: String },
+  profilePictureId: { type: String }, // Cloudinary public_id
   createdAt: { type: Date, default: Date.now }
 });
 
