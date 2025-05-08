@@ -1,5 +1,4 @@
 const Medicine = require('../models/Medicine.model');
-const { createPaymentIntent } = require('../services/paymentService');
 const { sendEmail } = require('../services/emailService');
 
 const checkAndUpdateStockStatus = async (medicine) => {
