@@ -5,7 +5,14 @@ const mongoose = require('mongoose');
 const app = express();
 
 //middlewares 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3050', // Your frontend URL
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Add OPTIONS
+    allowedHeaders: ['Content-Type', 'Authorization'], // Explicit headers
+    credentials: true // If using cookies/auth
+}));
+
+
 app.use(express.json());
 
 //mongoose connection

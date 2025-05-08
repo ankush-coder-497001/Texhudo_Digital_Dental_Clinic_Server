@@ -6,8 +6,8 @@ const medicineSaleSchema = new mongoose.Schema({
   medicines: [{
     medicine: { type: mongoose.Schema.Types.ObjectId, ref: 'Medicine', required: true },
     quantity: { type: Number, required: true },
-    priceAtSale: { type: Number, required: true },
-    costPriceAtSale: { type: Number, required: true }
+    price: { type: Number, required: true },
+    costPerUnit: { type: Number, required: true }
   }],
   totalAmount: { type: Number, required: true },
   profit: { type: Number, required: true },

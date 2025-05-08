@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { authMiddleware } = require('../middlewares/authMiddleware');
+// const { authMiddleware } = require('../middlewares/authMiddleware');
+const  authMiddleware  = require('../middlewares/authMiddleware')
 const {
     BookAppointment,
     getMyAppointments,
@@ -9,11 +10,12 @@ const {
     updateAppointmentStatus,
     deleteAppointment,
     getDoctorEarnings,
-    getEarningsSummary
-} = require('../controllers/Appointment.ctrl');
+    getEarningsSummary,
+} = require('../controllers/Appointment.ctrl')
+// console.log(BookAppointment, authMiddleware)
 
 // Regular appointment routes
-router.post('/book', authMiddleware, BookAppointment);
+router.post('/book', authMiddleware,BookAppointment);
 router.get('/my-appointments', authMiddleware, getMyAppointments);
 router.get('/details/:id', authMiddleware, getAppointmentDetails);
 router.get('/doctor/:doctorId', authMiddleware, getDoctorAppointments);

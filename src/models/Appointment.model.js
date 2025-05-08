@@ -4,8 +4,10 @@ const appointmentSchema = new mongoose.Schema({
   patientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   doctorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Doctor', required: true },
   date: { type: Date, required: true },
-  time: { type: String, required: true },
-  problem: { type: String, required: true },
+  time:{ type:String, required:true},
+  patient_Name: { type: String, required: true },
+  age: { type: String, required: true },
+  gender:{type:String, required:true},
   teeth: [Number],
   status: { 
     type: String, 

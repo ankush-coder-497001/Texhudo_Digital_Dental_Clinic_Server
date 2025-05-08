@@ -10,7 +10,7 @@ exports.createSale = async (req, res) => {
         const { customerName, customerPhone, medicines, paymentMethod } = req.body;
         
         // Validate payment method
-        if (!['cash', 'card'].includes(paymentMethod)) {
+        if (paymentMethod === 'cash' || paymentMethod === 'cash') {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid payment method. Must be either cash or card'
@@ -41,15 +41,15 @@ exports.createSale = async (req, res) => {
             }
 
             const itemTotal = medicine.price * item.quantity;
-            const itemProfit = (medicine.price - medicine.costPrice) * item.quantity;
+            const itemProfit = (medicine.price - medicine.costPerUnit) * item.quantity;
             totalAmount += itemTotal;
             totalProfit += itemProfit;
 
             medicineDetails.push({
                 medicine: medicine._id,
                 quantity: item.quantity,
-                priceAtSale: medicine.price,
-                costPriceAtSale: medicine.costPrice
+                price: medicine.price,
+                costPerUnit: medicine.costPerUnit
             });
 
             // Update stock
@@ -213,7 +213,7 @@ exports.getTopSellingMedicines = async (req, res) => {
                         $sum: {
                             $multiply: [
                                 "$medicines.quantity",
-                                { $subtract: ["$medicines.priceAtSale", "$medicines.costPriceAtSale"] }
+                                { $subtract: ["$medicines.priceAtSale", "$medicines.costPerUnitAtSale"] }
                             ]
                         }
                     }

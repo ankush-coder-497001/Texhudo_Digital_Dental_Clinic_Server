@@ -6,7 +6,7 @@ const { uploadImage, deleteImage } = require('../services/cloudinaryService');
 
 exports.register = async (req, res) => {
     try {
-        const { name, email, password, phone, licenseNumber } = req.body;
+        const { name, email, password, phone } = req.body;
 
         const existingPharmacist = await Pharmacist.findOne({ email });
         if (existingPharmacist) {
@@ -21,7 +21,8 @@ exports.register = async (req, res) => {
             email,
             password: hashedPassword,
             phone,
-            licenseNumber
+            // licenseNumber,
+            role:'Pharmacist'
         });
 
         await pharmacist.save();
@@ -60,7 +61,7 @@ exports.login = async (req, res) => {
                 name: pharmacist.name,
                 email: pharmacist.email,
                 phone: pharmacist.phone,
-                licenseNumber: pharmacist.licenseNumber
+                // licenseNumber: pharmacist.licenseNumber
             }
         });
     } catch (error) {

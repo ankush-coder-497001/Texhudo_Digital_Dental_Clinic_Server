@@ -2,6 +2,7 @@ const Appointment = require('../models/Appointment.model');
 const Doctor = require('../models/Doctor.model');
 const Treatment = require('../models/Treatment.model');
 
+
 // Function to generate appointment reference token
 //Each appointment now gets a unique token in this format: APP-XXXX-YYYY-ZZZZ where:
 
@@ -23,10 +24,10 @@ const generateAppointmentToken = (doctorId, date) => {
 };
 
 exports.BookAppointment = async (req, res) => {
-  try {
-    const { doctorId, date, time, problem, teeth, paymentMode } = req.body;
+  try { 
+    const { doctorId, date, time,patient_Name,age,gender,paymentMode } = req.body;
     const userId = req.user.id;
-
+    
     // Validate date
     const appointmentDate = new Date(date);
     if (isNaN(appointmentDate) || appointmentDate < new Date()) {
@@ -74,8 +75,9 @@ exports.BookAppointment = async (req, res) => {
       doctorId,
       date,
       time,
-      problem,
-      teeth,
+      patient_Name,
+      age,
+      gender,
       paymentMode,
       status: 'booked',
       fees: doctor.Fees,
@@ -410,3 +412,4 @@ exports.getEarningsSummary = async (req, res) => {
     });
   }
 };
+

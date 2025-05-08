@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User.model');
 const Doctor = require('../models/Doctor.model');
-
+const Pharmacist = require('../models/Pharmacist.model');
 const authMiddleware = (requiredUserTypes = []) => {
     return async (req, res, next) => {
         try {
@@ -14,6 +14,7 @@ const authMiddleware = (requiredUserTypes = []) => {
             }
 
             const token = authHeader.split(' ')[1];
+        // console.log(token);
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 
@@ -31,6 +32,8 @@ const authMiddleware = (requiredUserTypes = []) => {
                     user = await User.findById(decoded.id).select('-password');
                 } else if (decoded.type === 'doctor') {
                     user = await Doctor.findById(decoded.id).select('-password');
+                }else if (decoded.type === 'pharmacist') {
+                    user = await Pharmacist.findById(decoded.id).select('-password');
                 }
 
                 if (!user) {
