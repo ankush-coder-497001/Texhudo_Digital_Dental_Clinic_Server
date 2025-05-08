@@ -1,6 +1,7 @@
 const { Medicine, Category, Distributor } = require("../models/Medicine.model");
 // const createPaymentIntent  = require('../services/paymentService');
 const { sendEmail } = require("../services/emailService");
+const Medicine = require('../models/Medicine.model');
 
 const checkAndUpdateStockStatus = async (medicine) => {
   const isLowStock = medicine.quantity <= medicine.lowStockThreshold;

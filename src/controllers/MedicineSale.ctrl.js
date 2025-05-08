@@ -3,8 +3,7 @@ const Medicine = require('../models/Medicine.model');
 const mongoose = require('mongoose');
 
 exports.createSale = async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+
     
     try {
         const { customerName, customerPhone, medicines, paymentMethod } = req.body;
@@ -23,9 +22,8 @@ exports.createSale = async (req, res) => {
         // Validate and calculate totals
         const medicineDetails = [];
         for (const item of medicines) {
-            const medicine = await Medicine.findById(item.medicineId).session(session);
+            const medicine = await Medicine.findById(item.medicineId)
             if (!medicine) {
-                await session.abortTransaction();
                 return res.status(404).json({
                     success: false,
                     message: `Medicine with ID ${item.medicineId} not found`
@@ -33,7 +31,6 @@ exports.createSale = async (req, res) => {
             }
 
             if (medicine.quantity < item.quantity) {
-                await session.abortTransaction();
                 return res.status(400).json({
                     success: false,
                     message: `Insufficient stock for ${medicine.name}. Available: ${medicine.quantity}`
@@ -54,7 +51,7 @@ exports.createSale = async (req, res) => {
 
             // Update stock
             medicine.quantity -= item.quantity;
-            await medicine.save({ session });
+            await medicine.save();
         }
 
         const sale = new MedicineSale({
@@ -67,8 +64,7 @@ exports.createSale = async (req, res) => {
             soldBy: req.user.id
         });
 
-        await sale.save({ session });
-        await session.commitTransaction();
+        await sale.save();
         
         res.json({
             success: true,
@@ -76,15 +72,12 @@ exports.createSale = async (req, res) => {
             sale
         });
     } catch (error) {
-        await session.abortTransaction();
         res.status(500).json({
             success: false,
             message: 'Server error',
             error: error.message
         });
-    } finally {
-        session.endSession();
-    }
+    } 
 };
 
 exports.getSales = async (req, res) => {

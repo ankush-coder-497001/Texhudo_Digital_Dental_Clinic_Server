@@ -14,7 +14,7 @@ const authMiddleware = (requiredUserTypes = []) => {
             }
 
             const token = authHeader.split(' ')[1];
-        // console.log(token);
+  
             try {
                 const decoded = jwt.verify(token, process.env.JWT_SECRET);
                 
@@ -32,6 +32,8 @@ const authMiddleware = (requiredUserTypes = []) => {
                     user = await User.findById(decoded.id).select('-password');
                 } else if (decoded.type === 'doctor') {
                     user = await Doctor.findById(decoded.id).select('-password');
+                }else if (decoded.type === 'pharmacist') {
+                    user = await Pharmacist.findById(decoded.id).select('-password');
                 }else if (decoded.type === 'pharmacist') {
                     user = await Pharmacist.findById(decoded.id).select('-password');
                 }
